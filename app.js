@@ -248,3 +248,257 @@ document.addEventListener('DOMContentLoaded', () => {
   // Primer load
   loadPatients();
 });
+/* ============ MÓDULO FINANZAS (NUEVO) ============ */
+document.addEventListener('DOMContentLoaded', () => {
+  // Estado en navegador
+  const LS_KEY = 'finance_v1';
+  const finance = {
+    categories: [],   // [{ id, name }]
+    txs: [],          // [{ id, date, type: 'ingreso'|'gasto', categoryId, desc, amount }]
+    assets: []        // [{ id, name, value }]
+  };
+
+  // Atajos locales (no tocan los tuyos)
+  const $ = s => document.querySelector(s);
+  const finUuid = (p='id_') => p + Math.random().toString(36).slice(2,8) + Date.now().toString(36).slice(3);
+  const finMoney = n => (Number(n||0)).toLocaleString('es-CO', { style:'currency', currency:'COP', maximumFractionDigits:0 });
+
+  // Elementos
+  const finIncome = $('#fin_income');
+  const finExpense = $('#fin_expense');
+  const finNet = $('#fin_net');
+  const finAssetsTotal = $('#fin_assets_total');
+
+  const filterType = $('#fin_filter_type');
+  const filterCat = $('#fin_filter_cat');
+  const filterText = $('#fin_filter_text');
+  const btnFilterClear = $('#fin_btn_clear');
+
+  const selType = $('#fin_type');
+  const selCat = $('#fin_category');
+  const inpDate = $('#fin_date');
+  const inpAmount = $('#fin_amount');
+  const inpDesc = $('#fin_desc');
+  const btnAdd = $('#fin_add');
+
+  const inpNewCat = $('#fin_new_cat');
+  const btnAddCat = $('#fin_add_cat');
+  const catList = $('#fin_cat_list');
+
+  const finTable = $('#fin_table');
+  const btnExportCsv = $('#fin_export_csv');
+
+  const assetName = $('#asset_name');
+  const assetValue = $('#asset_value');
+  const assetAdd = $('#asset_add');
+  const assetTable = $('#asset_table');
+
+  // Persistencia local
+  function saveLocal(){
+    localStorage.setItem(LS_KEY, JSON.stringify(finance));
+  }
+  function loadLocal(){
+    const raw = localStorage.getItem(LS_KEY);
+    if(raw){
+      try{
+        const obj = JSON.parse(raw);
+        finance.categories = obj.categories || [];
+        finance.txs = obj.txs || [];
+        finance.assets = obj.assets || [];
+      }catch{}
+    } else {
+      // Categorías base
+      finance.categories = [
+        { id: finUuid('cat_'), name: 'Consulta' },
+        { id: finUuid('cat_'), name: 'Medicamentos' },
+        { id: finUuid('cat_'), name: 'Equipos' },
+      ];
+      saveLocal();
+    }
+  }
+
+  // Utilidades
+  function setToday(){ inpDate.value = new Date().toISOString().slice(0,10); }
+  function renderCategoryOptions(){
+    const opts = ['<option value="">(sin categoría)</option>']
+      .concat(finance.categories.map(c=> `<option value="${c.id}">${c.name}</option>`));
+    selCat.innerHTML = opts.join('');
+    filterCat.innerHTML = ['<option value="">Categoría (todas)</option>']
+      .concat(finance.categories.map(c=> `<option value="${c.id}">${c.name}</option>`)).join('');
+  }
+  function renderCategoriesChips(){
+    catList.innerHTML = '';
+    finance.categories.forEach(c=>{
+      const span = document.createElement('span');
+      span.className = 'px-3 py-1 rounded-full bg-gray-100 border flex items-center gap-2';
+      span.innerHTML = `<span>${c.name}</span><button data-del-cat="${c.id}" class="text-red-600 hover:underline">Eliminar</button>`;
+      catList.appendChild(span);
+    });
+    catList.querySelectorAll('[data-del-cat]').forEach(b=>{
+      b.addEventListener('click', ()=>{
+        const id = b.dataset.delCat;
+        if(!confirm('Eliminar categoría? (Los movimientos conservarán el id)')) return;
+        finance.categories = finance.categories.filter(x=> x.id!==id);
+        saveLocal();
+        renderCategoryOptions();
+        renderCategoriesChips();
+        renderFinanceTables();
+      });
+    });
+  }
+  function totals(){
+    const inc = finance.txs.filter(t=>t.type==='ingreso').reduce((s,t)=> s+Number(t.amount||0), 0);
+    const exp = finance.txs.filter(t=>t.type==='gasto').reduce((s,t)=> s+Number(t.amount||0), 0);
+    const assetsSum = finance.assets.reduce((s,a)=> s+Number(a.value||0), 0);
+    return { inc, exp, net: inc-exp, assetsSum };
+  }
+  function renderSummary(){
+    const t = totals();
+    finIncome.textContent = finMoney(t.inc);
+    finExpense.textContent = finMoney(t.exp);
+    finNet.textContent = finMoney(t.net);
+    finAssetsTotal.textContent = finMoney(t.assetsSum);
+  }
+  function renderFinanceTables(){
+    // Movimientos (con filtros)
+    const txt = (filterText.value||'').toLowerCase();
+    const rows = finance.txs.filter(t=>{
+      const okType = !filterType.value || t.type===filterType.value;
+      const okCat = !filterCat.value || t.categoryId===filterCat.value;
+      const okTxt = !txt || (t.desc||'').toLowerCase().includes(txt);
+      return okType && okCat && okTxt;
+    }).sort((a,b)=> String(b.date||'').localeCompare(String(a.date||'')));
+
+    finTable.innerHTML = '';
+    rows.forEach(t=>{
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td class="py-2 pr-4">${t.date||'—'}</td>
+        <td class="py-2 pr-4 capitalize">${t.type}</td>
+        <td class="py-2 pr-4">${(finance.categories.find(c=>c.id===t.categoryId)||{}).name||'—'}</td>
+        <td class="py-2 pr-4">${t.desc||''}</td>
+        <td class="py-2 pr-4 text-right">${finMoney(t.amount)}</td>
+        <td class="py-2"><button class="text-red-600 hover:underline" data-del-tx="${t.id}">Eliminar</button></td>`;
+      finTable.appendChild(tr);
+    });
+    finTable.querySelectorAll('[data-del-tx]').forEach(b=>{
+      b.addEventListener('click', ()=>{
+        const id = b.dataset.delTx;
+        if(!confirm('¿Eliminar este movimiento?')) return;
+        finance.txs = finance.txs.filter(x=> x.id!==id);
+        saveLocal();
+        renderSummary();
+        renderFinanceTables();
+      });
+    });
+
+    // Activos
+    assetTable.innerHTML = '';
+    finance.assets.slice().sort((a,b)=> a.name.localeCompare(b.name)).forEach(a=>{
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td class="py-2 pr-4">${a.name}</td>
+        <td class="py-2 pr-4 text-right">${finMoney(a.value)}</td>
+        <td class="py-2"><button class="text-red-600 hover:underline" data-del-asset="${a.id}">Eliminar</button></td>`;
+      assetTable.appendChild(tr);
+    });
+    assetTable.querySelectorAll('[data-del-asset]').forEach(b=>{
+      b.addEventListener('click', ()=>{
+        const id = b.dataset.delAsset;
+        if(!confirm('¿Eliminar este activo?')) return;
+        finance.assets = finance.assets.filter(x=> x.id!==id);
+        saveLocal();
+        renderSummary();
+        renderFinanceTables();
+      });
+    });
+  }
+
+  // CSV
+  function toCSV(rows) {
+    if (!rows || !rows.length) return '';
+    const headers = Object.keys(rows[0]);
+    const esc = v => `"${String(v ?? '').replace(/"/g, '""')}"`;
+    const head = headers.map(esc).join(',');
+    const body = rows.map(r => headers.map(h => esc(r[h])).join(',')).join('\n');
+    return head + '\n' + body;
+  }
+  function download(filename, text) {
+    const blob = new Blob([text], {type: 'text/csv;charset=utf-8;'});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = filename; a.click();
+    URL.revokeObjectURL(url);
+  }
+
+  // Eventos
+  btnAddCat.addEventListener('click', ()=>{
+    const name = (inpNewCat.value||'').trim();
+    if(!name) return alert('Escribe un nombre de categoría.');
+    if(finance.categories.some(c=> c.name.toLowerCase()===name.toLowerCase())){
+      return alert('Esa categoría ya existe.');
+    }
+    finance.categories.push({ id: finUuid('cat_'), name });
+    inpNewCat.value = '';
+    saveLocal();
+    renderCategoryOptions();
+    renderCategoriesChips();
+  });
+
+  btnAdd.addEventListener('click', ()=>{
+    const type = selType.value;
+    const date = inpDate.value || new Date().toISOString().slice(0,10);
+    const categoryId = selCat.value || '';
+    const amount = Number(inpAmount.value||0);
+    const desc = (inpDesc.value||'').trim();
+    if(!amount || amount<=0) return alert('Ingresa un valor mayor a 0.');
+    finance.txs.push({ id: finUuid('tx_'), type, date, categoryId, amount, desc });
+    inpAmount.value = ''; inpDesc.value='';
+    saveLocal();
+    renderSummary();
+    renderFinanceTables();
+  });
+
+  [filterType, filterCat, filterText].forEach(el=>{
+    el.addEventListener('input', renderFinanceTables);
+  });
+
+  btnFilterClear.addEventListener('click', ()=>{
+    filterType.value = ''; filterCat.value=''; filterText.value='';
+    renderFinanceTables();
+  });
+
+  assetAdd.addEventListener('click', ()=>{
+    const name = (assetName.value||'').trim();
+    const value = Number(assetValue.value||0);
+    if(!name) return alert('Escribe el nombre del activo.');
+    if(!value || value<=0) return alert('Ingresa un valor del activo.');
+    finance.assets.push({ id: finUuid('as_'), name, value });
+    assetName.value=''; assetValue.value='';
+    saveLocal();
+    renderSummary();
+    renderFinanceTables();
+  });
+
+  btnExportCsv.addEventListener('click', ()=>{
+    if(!finance.txs.length) return alert('No hay movimientos.');
+    const rows = finance.txs.map(t=>({
+      id: t.id, fecha: t.date, tipo: t.type,
+      categoria: (finance.categories.find(c=>c.id===t.categoryId)||{}).name||'',
+      descripcion: t.desc||'',
+      valor: t.amount
+    }));
+    const csv = toCSV(rows);
+    download('movimientos.csv', csv);
+  });
+
+  // Inicialización
+  setToday();
+  loadLocal();
+  renderCategoryOptions();
+  renderCategoriesChips();
+  renderSummary();
+  renderFinanceTables();
+});
+/* ========== FIN MÓDULO FINANZAS (NUEVO) ========== */
+
