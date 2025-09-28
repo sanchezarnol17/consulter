@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Pacientes — Sheets (v3)</title>
+
+  <!-- Tailwind vía CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <!-- Tus estilos propios -->
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body class="bg-gray-50 text-gray-900">
+  <nav class="bg-white border-b sticky top-0 z-10">
+    <div class="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between">
+      <div class="flex items-center gap-3">
+        <span class="text-2xl">☁️</span>
+        <h1 class="text-xl font-semibold">Pacientes — Sheets</h1>
+      </div>
+      <div class="flex items-center gap-2">
+        <button id="btnAdd" type="button" class="px-3 py-2 rounded-xl bg-blue-600 text-white hover:bg-blue-700">Nuevo paciente</button>
+        <button id="btnReload" type="button" class="px-3 py-2 rounded-xl bg-gray-200 hover:bg-gray-300">Actualizar</button>
+      </div>
+    </div>
+  </nav>
+
+  <main class="max-w-6xl mx-auto px-4 py-6">
+    <div class="mb-4 grid grid-cols-1 md:grid-cols-6 gap-3">
+      <input id="search" class="md:col-span-4 px-3 py-2 rounded-xl border" placeholder="Buscar por nombre, documento o teléfono" />
+      <button id="btnClear" type="button" class="px-3 py-2 rounded-xl bg-gray-200 hover:bg-gray-300">Limpiar</button>
+      <div id="netState" class="text-sm text-gray-500 md:justify-self-end"></div>
+    </div>
+
+    <div id="list" class="grid gap-3"></div>
+
+    <dialog id="patientDialog" class="rounded-2xl p-0 w-full max-w-2xl">
+      <form id="patientForm" method="dialog" class="bg-white rounded-2xl shadow p-6 grid grid-cols-1 md:grid-cols-2 gap-4">
+        <h2 class="md:col-span-2 text-xl font-semibold"><span id="dialogTitle">Nuevo paciente</span></h2>
+        <input type="hidden" id="p_id" />
+        <div>
+          <label class="block text-sm text-gray-600">Nombre completo *</label>
+          <input id="p_full_name" required class="mt-1 px-3 py-2 rounded-xl border w-full" />
+        </div>
+        <div>
+          <label class="block text-sm text-gray-600">Documento</label>
+          <input id="p_document_id" class="mt-1 px-3 py-2 rounded-xl border w-full" />
+        </div>
+        <div>
+          <label class="block text-sm text-gray-600">Teléfono</label>
+          <input id="p_phone" class="mt-1 px-3 py-2 rounded-xl border w-full" />
+        </div>
+        <div>
+          <label class="block text-sm text-gray-600">Email</label>
+          <input id="p_email" type="email" class="mt-1 px-3 py-2 rounded-xl border w-full" />
+        </div>
+        <div>
+          <label class="block text-sm text-gray-600">Fecha de nacimiento</label>
+          <input id="p_birthdate" type="date" class="mt-1 px-3 py-2 rounded-xl border w-full" />
+        </div>
+        <div class="md:col-span-2">
+          <label class="block text-sm text-gray-600">Dirección</label>
+          <input id="p_address" class="mt-1 px-3 py-2 rounded-xl border w-full" />
+        </div>
+        <div class="md:col-span-2">
+          <label class="block text-sm text-gray-600">Notas</label>
+          <textarea id="p_notes" rows="3" class="mt-1 px-3 py-2 rounded-xl border w-full"></textarea>
+        </div>
+        <div class="md:col-span-2 flex items-center gap-2 justify-end">
+          <button type="button" id="btnCancel" class="px-4 py-2 rounded-xl bg-gray-200 hover:bg-gray-300">Cancelar</button>
+          <button type="submit" id="btnSavePatient" class="px-4 py-2 rounded-xl bg-blue-600 text-white hover:bg-blue-700">Guardar</button>
+        </div>
+      </form>
+    </dialog>
+
+    <section id="detail" class="hidden"></section>
+  </main>
+
+  <footer class="text-center text-xs text-gray-500 py-6">Los datos se guardan en tu Google Sheets mediante Apps Script.</footer>
+
+  <!-- Tu lógica JS -->
+  <script src="app.js" defer></script>
+</body>
+</html>
+

@@ -1,0 +1,5 @@
+/* Reglas originales del <style> inline */
+input[type=file] { display: none; }
+dialog[open] { display: block; }
+
+
