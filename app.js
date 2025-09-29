@@ -623,5 +623,42 @@ document.addEventListener('DOMContentLoaded', () => {
   // Estado inicial
   showPacientes(true);
 })();
+/* ===== Tabs para 3 módulos: Pacientes, Finanzas, Citas ===== */
+(function () {
+  const tabs = [
+    { btn: 'tabPacientes', mod: 'modulePatients' },
+    { btn: 'tabFinanzas',  mod: 'moduleFinance' },
+    { btn: 'tabCitas',     mod: 'moduleAppointments' },
+  ];
+  const btnAdd = document.getElementById('btnAdd');
+  const btnReload = document.getElementById('btnReload');
+
+  function activate(btnId){
+    tabs.forEach(t=>{
+      const b = document.getElementById(t.btn);
+      const m = document.getElementById(t.mod);
+      const active = t.btn === btnId;
+      if (b && m) {
+        m.classList.toggle('hidden', !active);
+        m.style.display = active ? '' : 'none'; // fallback
+        b.classList.toggle('bg-gray-900', active);
+        b.classList.toggle('text-white', active);
+        b.classList.toggle('bg-gray-200', !active);
+      }
+    });
+    // Botones del header solo en Pacientes
+    if (btnAdd)    btnAdd.style.display    = (btnId === 'tabPacientes') ? '' : 'none';
+    if (btnReload) btnReload.style.display = (btnId === 'tabPacientes') ? '' : 'none';
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  tabs.forEach(t=>{
+    const b = document.getElementById(t.btn);
+    if (b) b.addEventListener('click', ()=> activate(t.btn));
+  });
+
+  activate('tabPacientes'); // vista inicial
+})();
+
 
 
