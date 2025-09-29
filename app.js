@@ -505,7 +505,7 @@ document.addEventListener('DOMContentLoaded', () => {
   function load(){ try{ state.items = JSON.parse(localStorage.getItem(LS)) || []; }catch{ state.items=[]; } }
   function save(){ localStorage.setItem(LS, JSON.stringify(state.items)); }
 
-  // NUEVO: cambiar estado sin eliminar
+  // Cambiar estado (Programada / Realizada / Cancelada)
   function changeStatus(id, status){
     const item = state.items.find(i => i.id === id);
     if (!item) return;
@@ -520,7 +520,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const txt  = (fTxt?.value||'').toLowerCase();
     const sts  = fSt?.value || '';
 
-    if (!table){ return; }
+    if (!table) return;
 
     const rows = state.items.filter(x=>{
       return x.date>=from && x.date<=to &&
@@ -535,9 +535,6 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     rows.forEach(x=>{
-      const tr = document.createElement('tr');
-
-      // NUEVO: acciones según estado
       const actions = (x.status === 'Programada')
         ? `
           <button data-done="${x.id}" class="text-emerald-700 hover:underline">Marcar realizada</button>
@@ -546,7 +543,7 @@ document.addEventListener('DOMContentLoaded', () => {
         : `
           <button data-schedule="${x.id}" class="text-blue-700 hover:underline">Marcar programada</button>
         `;
-
+      const tr = document.createElement('tr');
       tr.innerHTML = `
         <td class="py-2 pr-4">${x.date}</td>
         <td class="py-2 pr-4">${x.time}</td>
@@ -559,19 +556,18 @@ document.addEventListener('DOMContentLoaded', () => {
       `;
       table.appendChild(tr);
     });
-
-    // NUEVO: listeners de acciones
-    table.querySelectorAll('[data-done]').forEach(b=>{
-      b.addEventListener('click', () => changeStatus(b.dataset.done, 'Realizada'));
-    });
-    table.querySelectorAll('[data-cancel]').forEach(b=>{
-      b.addEventListener('click', () => changeStatus(b.dataset.cancel, 'Cancelada'));
-    });
-    table.querySelectorAll('[data-schedule]').forEach(b=>{
-      b.addEventListener('click', () => changeStatus(b.dataset.schedule, 'Programada'));
-    });
   }
 
+  // 🔁 Delegación: un solo listener para todos los botones de la tabla
+  table?.addEventListener('click', (ev)=>{
+    const btn = ev.target.closest('button');
+    if (!btn) return;
+    if (btn.dataset.done)     return changeStatus(btn.dataset.done, 'Realizada');
+    if (btn.dataset.cancel)   return changeStatus(btn.dataset.cancel, 'Cancelada');
+    if (btn.dataset.schedule) return changeStatus(btn.dataset.schedule, 'Programada');
+  });
+
+  // Crear cita
   add?.addEventListener('click', ()=>{
     const item = {
       id: uuid('apt_'),
@@ -589,6 +585,7 @@ document.addEventListener('DOMContentLoaded', () => {
     render();
   });
 
+  // Filtros y export
   [fFrom,fTo,fSt,fTxt].forEach(el=> el?.addEventListener('input', render));
   fClear?.addEventListener('click', ()=> { if(fFrom)fFrom.value=''; if(fTo)fTo.value=''; if(fSt)fSt.value=''; if(fTxt)fTxt.value=''; render(); });
   btnCsv?.addEventListener('click', ()=>{
@@ -641,6 +638,7 @@ document.addEventListener('DOMContentLoaded', () => {
   })();
 
 });
+
 
 
 
