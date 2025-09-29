@@ -582,4 +582,46 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 /* ==== fin Tabs ===== */
 
+/* ===== Tabs Pacientes / Finanzas (versión robusta) ===== */
+(function () {
+  // Elementos
+  const tabPac = document.getElementById('tabPacientes');
+  const tabFin = document.getElementById('tabFinanzas');
+  const modPac = document.getElementById('modulePatients');
+  const modFin = document.getElementById('moduleFinance');
+
+  // Si falta algo, salimos silenciosamente
+  if (!tabPac || !tabFin || !modPac || !modFin) return;
+
+  function showPacientes(isPac) {
+    // Tailwind
+    modPac.classList.toggle('hidden', !isPac);
+    modFin.classList.toggle('hidden', isPac);
+    // Fallback por si la clase 'hidden' no aplica
+    modPac.style.display = isPac ? '' : 'none';
+    modFin.style.display = isPac ? 'none' : '';
+
+    // Estilos de pestañas
+    tabPac.classList.toggle('bg-gray-900', isPac);
+    tabPac.classList.toggle('text-white', isPac);
+    tabPac.classList.toggle('bg-gray-200', !isPac);
+
+    tabFin.classList.toggle('bg-gray-900', !isPac);
+    tabFin.classList.toggle('text-white', !isPac);
+    tabFin.classList.toggle('bg-gray-200', isPac);
+
+    // Botones del header de Pacientes
+    const btnAdd = document.getElementById('btnAdd');
+    const btnReload = document.getElementById('btnReload');
+    if (btnAdd) btnAdd.style.display = isPac ? '' : 'none';
+    if (btnReload) btnReload.style.display = isPac ? '' : 'none';
+  }
+
+  tabPac.addEventListener('click', () => showPacientes(true));
+  tabFin.addEventListener('click', () => showPacientes(false));
+
+  // Estado inicial
+  showPacientes(true);
+})();
+
 
