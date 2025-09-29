@@ -764,6 +764,49 @@ document.addEventListener('DOMContentLoaded', () => {
   // init
   d.value = today(); load(); render();
 })();
+/* ===== Tabs para Pacientes / Finanzas / Citas (fix) ===== */
+(function () {
+  // Pares [botón, contenedor] que realmente existan en el DOM
+  const pairs = [
+    ['tabPacientes', 'modulePatients'],
+    ['tabFinanzas',  'moduleFinance'],
+    ['tabCitas',     'moduleAppointments'],
+  ].filter(([b, m]) => document.getElementById(b) && document.getElementById(m));
+
+  if (!pairs.length) return;
+
+  function activate(btnId) {
+    pairs.forEach(([bId, mId]) => {
+      const btn = document.getElementById(bId);
+      const mod = document.getElementById(mId);
+      const on = (bId === btnId);
+      // mostrar/ocultar
+      mod.classList.toggle('hidden', !on);
+      mod.style.display = on ? '' : 'none'; // respaldo por si 'hidden' no aplica
+      // estado visual del botón
+      btn.classList.toggle('bg-gray-900', on);
+      btn.classList.toggle('text-white', on);
+      btn.classList.toggle('bg-gray-200', !on);
+    });
+
+    // Oculta botones de Pacientes cuando no estás en Pacientes
+    const btnAdd = document.getElementById('btnAdd');
+    const btnReload = document.getElementById('btnReload');
+    const inPac = btnId === 'tabPacientes';
+    if (btnAdd) btnAdd.style.display = inPac ? '' : 'none';
+    if (btnReload) btnReload.style.display = inPac ? '' : 'none';
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  // Clicks
+  pairs.forEach(([bId]) => {
+    document.getElementById(bId).addEventListener('click', () => activate(bId));
+  });
+
+  // Vista inicial
+  activate('tabPacientes');
+})();
+
 
 
 
