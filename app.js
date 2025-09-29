@@ -501,4 +501,46 @@ document.addEventListener('DOMContentLoaded', () => {
   renderFinanceTables();
 });
 /* ========== FIN MÓDULO FINANZAS (NUEVO) ========== */
+/* ====== Tabs Pacientes / Finanzas ====== */
+document.addEventListener('DOMContentLoaded', () => {
+  const tabPac = document.getElementById('tabPacientes');
+  const tabFin = document.getElementById('tabFinanzas');
+  const modPac = document.getElementById('modulePatients');
+  const modFin = document.getElementById('moduleFinance');
+
+  // Botones del header de Pacientes (para ocultarlos en Finanzas)
+  const btnAdd = document.getElementById('btnAdd');
+  const btnReload = document.getElementById('btnReload');
+
+  function setActive(pacientes){
+    if (!modPac || !modFin) return;
+
+    // Mostrar/ocultar módulos
+    modPac.classList.toggle('hidden', !pacientes);
+    modFin.classList.toggle('hidden', pacientes);
+
+    // Estilo de la pestaña activa
+    tabPac.classList.toggle('bg-gray-900', pacientes);
+    tabPac.classList.toggle('text-white', pacientes);
+    tabPac.classList.toggle('bg-gray-200', !pacientes);
+
+    tabFin.classList.toggle('bg-gray-900', !pacientes);
+    tabFin.classList.toggle('text-white', !pacientes);
+    tabFin.classList.toggle('bg-gray-200', pacientes);
+
+    // Ocultar botones de Pacientes cuando estás en Finanzas
+    btnAdd?.classList.toggle('hidden', !pacientes);
+    btnReload?.classList.toggle('hidden', !pacientes);
+
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  tabPac?.addEventListener('click', () => setActive(true));
+  tabFin?.addEventListener('click', () => setActive(false));
+
+  // Arranca mostrando Pacientes
+  setActive(true);
+});
+/* ==== Fin Tabs ===== */
+
 
