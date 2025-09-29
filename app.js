@@ -660,5 +660,110 @@ document.addEventListener('DOMContentLoaded', () => {
   activate('tabPacientes'); // vista inicial
 })();
 
+/* ===== Módulo Citas (localStorage) ===== */
+(function () {
+  const LS = 'appointments_v1';
+  const $ = s => document.querySelector(s);
+  const uid = () => 'apt_' + Math.random().toString(36).slice(2,7) + Date.now().toString(36).slice(-4);
+
+  const state = { items: [] };
+
+  // refs
+  const d = $('#apt_date'), t = $('#apt_time'), dur = $('#apt_duration'),
+        p = $('#apt_patient'), ty = $('#apt_type'), st = $('#apt_status'),
+        notes = $('#apt_notes'), add = $('#apt_add');
+
+  const fFrom = $('#apt_filter_from'), fTo = $('#apt_filter_to'),
+        fSt = $('#apt_filter_status'), fTxt = $('#apt_filter_text'),
+        fClear = $('#apt_filter_clear');
+
+  const table = $('#apt_table'), btnCsv = $('#apt_export_csv');
+
+  if (!table) return; // por si el HTML aún no tiene el módulo
+
+  function money(n){ return Number(n||0).toLocaleString('es-CO'); }
+  function today(){ return new Date().toISOString().slice(0,10); }
+  function load(){ try{ state.items = JSON.parse(localStorage.getItem(LS)) || []; }catch{ state.items=[]; } }
+  function save(){ localStorage.setItem(LS, JSON.stringify(state.items)); }
+
+  function render(){
+    const from = fFrom.value || '0000-01-01';
+    const to   = fTo.value   || '9999-12-31';
+    const txt  = (fTxt.value||'').toLowerCase();
+    const sts  = fSt.value;
+
+    const rows = state.items.filter(x=>{
+      return x.date>=from && x.date<=to &&
+             (!sts || x.status===sts) &&
+             (!txt || (x.patient+x.notes).toLowerCase().includes(txt));
+    }).sort((a,b)=> (a.date+a.time).localeCompare(b.date+b.time));
+
+    table.innerHTML = '';
+    if(!rows.length){
+      table.innerHTML = `<tr><td class="py-3 text-gray-500" colspan="8">Sin citas</td></tr>`;
+      return;
+    }
+    rows.forEach(x=>{
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td class="py-2 pr-4">${x.date}</td>
+        <td class="py-2 pr-4">${x.time}</td>
+        <td class="py-2 pr-4">${x.duration} min</td>
+        <td class="py-2 pr-4">${x.patient}</td>
+        <td class="py-2 pr-4">${x.type}</td>
+        <td class="py-2 pr-4">${x.status}</td>
+        <td class="py-2 pr-4">${x.notes||''}</td>
+        <td class="py-2"><button data-del="${x.id}" class="text-red-600 hover:underline">Eliminar</button></td>`;
+      table.appendChild(tr);
+    });
+    table.querySelectorAll('[data-del]').forEach(b=>{
+      b.onclick = ()=> {
+        state.items = state.items.filter(i=> i.id !== b.dataset.del);
+        save(); render();
+      };
+    });
+  }
+
+  function toCSV(rows){
+    if(!rows.length) return '';
+    const h = ['id','fecha','hora','duracion','paciente','tipo','estado','notas'];
+    const esc = v => `"${String(v??'').replace(/"/g,'""')}"`;
+    const head = h.join(',');
+    const body = rows.map(r=> [r.id,r.date,r.time,r.duration,r.patient,r.type,r.status,r.notes].map(esc).join(',')).join('\n');
+    return head+'\n'+body;
+  }
+  function download(name, text){
+    const blob = new Blob([text], {type: 'text/csv;charset=utf-8;'}); const url = URL.createObjectURL(blob);
+    const a = document.createElement('a'); a.href=url; a.download=name; a.click(); URL.revokeObjectURL(url);
+  }
+
+  // eventos
+  add.onclick = ()=>{
+    const item = {
+      id: uid(),
+      date: d.value || today(),
+      time: t.value || '08:00',
+      duration: Number(dur.value||30),
+      patient: (p.value||'').trim(),
+      type: ty.value,
+      status: st.value,
+      notes: (notes.value||'').trim()
+    };
+    if(!item.patient) return alert('Escribe el nombre del paciente.');
+    state.items.push(item); save();
+    p.value=''; notes.value='';
+    render();
+  };
+  [fFrom,fTo,fSt,fTxt].forEach(el=> el && el.addEventListener('input', render));
+  fClear.onclick = ()=> { fFrom.value=''; fTo.value=''; fSt.value=''; fTxt.value=''; render(); };
+  btnCsv.onclick = ()=>{
+    if(!state.items.length) return alert('No hay citas.');
+    download('citas.csv', toCSV(state.items));
+  };
+
+  // init
+  d.value = today(); load(); render();
+})();
+
 
 
