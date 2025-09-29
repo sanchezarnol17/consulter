@@ -98,23 +98,33 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function openForm(id){
-      form.reset();
-      $('#dialogTitle')!.textContent = id ? 'Editar paciente' : 'Nuevo paciente';
-      $('#p_id')!.value = id || '';
-      if(id){
-        const p = state.patients.find(x=> x.id === id);
-        if(p){
-          $('#p_full_name')!.value   = p.nombre||'';
-          $('#p_document_id')!.value = p.documento||'';
-          $('#p_phone')!.value       = p.telefono||'';
-          $('#p_email')!.value       = p.email||'';
-          $('#p_birthdate')!.value   = p.fecha_nacimiento||'';
-          $('#p_address')!.value     = p.direccion||'';
-          $('#p_notes')!.value       = p.notas||'';
-        }
-      }
-      dlg?.showModal();
+  form.reset();
+
+  const titleEl = $('#dialogTitle');
+  if (titleEl) titleEl.textContent = id ? 'Editar paciente' : 'Nuevo paciente';
+
+  const idEl = $('#p_id');
+  if (idEl) idEl.value = id || '';
+
+  if (id){
+    const p = state.patients.find(x => x.id === id);
+    if (p){
+      const set = (sel, val='') => {
+        const el = $(sel);
+        if (el) el.value = val;
+      };
+      set('#p_full_name',   p.nombre);
+      set('#p_document_id', p.documento);
+      set('#p_phone',       p.telefono);
+      set('#p_email',       p.email);
+      set('#p_birthdate',   p.fecha_nacimiento);
+      set('#p_address',     p.direccion);
+      set('#p_notes',       p.notas);
     }
+  }
+
+  if (dlg && dlg.showModal) dlg.showModal();
+}
 
     form.addEventListener('submit', async (ev) => {
       ev.preventDefault();
@@ -638,6 +648,7 @@ document.addEventListener('DOMContentLoaded', () => {
   })();
 
 });
+
 
 
 
