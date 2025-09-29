@@ -483,98 +483,125 @@ document.addEventListener('DOMContentLoaded', () => {
     setToday(); loadLocal(); renderCategoryOptions(); renderCategoriesChips(); renderSummary(); renderFinanceTables();
   })();
 
-  // ================== CITAS ==================
-  (function initAppointments(){
-    const mod = $('#moduleAppointments');
-    if (!mod) return;
+ // ================== CITAS ==================
+(function initAppointments(){
+  const mod = $('#moduleAppointments');
+  if (!mod) return;
 
-    const LS = 'appointments_v1';
-    const d = $('#apt_date'), t = $('#apt_time'), dur = $('#apt_duration'),
-          p = $('#apt_patient'), ty = $('#apt_type'), st = $('#apt_status'),
-          notes = $('#apt_notes'), add = $('#apt_add');
+  const LS = 'appointments_v1';
+  const d = $('#apt_date'), t = $('#apt_time'), dur = $('#apt_duration'),
+        p = $('#apt_patient'), ty = $('#apt_type'), st = $('#apt_status'),
+        notes = $('#apt_notes'), add = $('#apt_add');
 
-    const fFrom = $('#apt_filter_from'), fTo = $('#apt_filter_to'),
-          fSt = $('#apt_filter_status'), fTxt = $('#apt_filter_text'),
-          fClear = $('#apt_filter_clear');
+  const fFrom = $('#apt_filter_from'), fTo = $('#apt_filter_to'),
+        fSt = $('#apt_filter_status'), fTxt = $('#apt_filter_text'),
+        fClear = $('#apt_filter_clear');
 
-    const table = $('#apt_table'), btnCsv = $('#apt_export_csv');
+  const table = $('#apt_table'), btnCsv = $('#apt_export_csv');
 
-    const state = { items: [] };
+  const state = { items: [] };
 
-    function today(){ return new Date().toISOString().slice(0,10); }
-    function load(){ try{ state.items = JSON.parse(localStorage.getItem(LS)) || []; }catch{ state.items=[]; } }
-    function save(){ localStorage.setItem(LS, JSON.stringify(state.items)); }
+  function today(){ return new Date().toISOString().slice(0,10); }
+  function load(){ try{ state.items = JSON.parse(localStorage.getItem(LS)) || []; }catch{ state.items=[]; } }
+  function save(){ localStorage.setItem(LS, JSON.stringify(state.items)); }
 
-    function render(){
-      const from = fFrom?.value || '0000-01-01';
-      const to   = fTo?.value   || '9999-12-31';
-      const txt  = (fTxt?.value||'').toLowerCase();
-      const sts  = fSt?.value || '';
+  // NUEVO: cambiar estado sin eliminar
+  function changeStatus(id, status){
+    const item = state.items.find(i => i.id === id);
+    if (!item) return;
+    item.status = status;
+    save();
+    render();
+  }
 
-      if (!table){ return; }
+  function render(){
+    const from = fFrom?.value || '0000-01-01';
+    const to   = fTo?.value   || '9999-12-31';
+    const txt  = (fTxt?.value||'').toLowerCase();
+    const sts  = fSt?.value || '';
 
-      const rows = state.items.filter(x=>{
-        return x.date>=from && x.date<=to &&
-               (!sts || x.status===sts) &&
-               (!txt || (x.patient+x.notes).toLowerCase().includes(txt));
-      }).sort((a,b)=> (a.date+a.time).localeCompare(b.date+b.time));
+    if (!table){ return; }
 
-      table.innerHTML = '';
-      if(!rows.length){
-        table.innerHTML = `<tr><td class="py-3 text-gray-500" colspan="8">Sin citas</td></tr>`;
-        return;
-      }
-      rows.forEach(x=>{
-        const tr = document.createElement('tr');
-        tr.innerHTML = `
-          <td class="py-2 pr-4">${x.date}</td>
-          <td class="py-2 pr-4">${x.time}</td>
-          <td class="py-2 pr-4">${x.duration} min</td>
-          <td class="py-2 pr-4">${x.patient}</td>
-          <td class="py-2 pr-4">${x.type}</td>
-          <td class="py-2 pr-4">${x.status}</td>
-          <td class="py-2 pr-4">${x.notes||''}</td>
-          <td class="py-2"><button data-del="${x.id}" class="text-red-600 hover:underline">Eliminar</button></td>`;
-        table.appendChild(tr);
-      });
-      $$('[data-del]', table).forEach(b=>{
-        b.onclick = ()=> {
-          state.items = state.items.filter(i=> i.id !== b.dataset.del);
-          save(); render();
-        };
-      });
+    const rows = state.items.filter(x=>{
+      return x.date>=from && x.date<=to &&
+             (!sts || x.status===sts) &&
+             (!txt || (x.patient+x.notes).toLowerCase().includes(txt));
+    }).sort((a,b)=> (a.date+a.time).localeCompare(b.date+b.time));
+
+    table.innerHTML = '';
+    if(!rows.length){
+      table.innerHTML = `<tr><td class="py-3 text-gray-500" colspan="8">Sin citas</td></tr>`;
+      return;
     }
 
-    add?.addEventListener('click', ()=>{
-      const item = {
-        id: uuid('apt_'),
-        date: d?.value || today(),
-        time: t?.value || '08:00',
-        duration: Number(dur?.value||30),
-        patient: (p?.value||'').trim(),
-        type: ty?.value || 'Consulta',
-        status: st?.value || 'Programada',
-        notes: (notes?.value||'').trim()
-      };
-      if(!item.patient) return alert('Escribe el nombre del paciente.');
-      state.items.push(item); save();
-      if (p) p.value=''; if (notes) notes.value='';
-      render();
+    rows.forEach(x=>{
+      const tr = document.createElement('tr');
+
+      // NUEVO: acciones según estado
+      const actions = (x.status === 'Programada')
+        ? `
+          <button data-done="${x.id}" class="text-emerald-700 hover:underline">Marcar realizada</button>
+          <button data-cancel="${x.id}" class="text-red-600 hover:underline ml-2">Cancelar</button>
+        `
+        : `
+          <button data-schedule="${x.id}" class="text-blue-700 hover:underline">Marcar programada</button>
+        `;
+
+      tr.innerHTML = `
+        <td class="py-2 pr-4">${x.date}</td>
+        <td class="py-2 pr-4">${x.time}</td>
+        <td class="py-2 pr-4">${x.duration} min</td>
+        <td class="py-2 pr-4">${x.patient}</td>
+        <td class="py-2 pr-4">${x.type}</td>
+        <td class="py-2 pr-4">${x.status}</td>
+        <td class="py-2 pr-4">${x.notes||''}</td>
+        <td class="py-2">${actions}</td>
+      `;
+      table.appendChild(tr);
     });
 
-    [fFrom,fTo,fSt,fTxt].forEach(el=> el?.addEventListener('input', render));
-    fClear?.addEventListener('click', ()=> { if(fFrom)fFrom.value=''; if(fTo)fTo.value=''; if(fSt)fSt.value=''; if(fTxt)fTxt.value=''; render(); });
-    btnCsv?.addEventListener('click', ()=>{
-      if(!state.items.length) return alert('No hay citas.');
-      const rows = state.items.map(r=>({
-        id:r.id, fecha:r.date, hora:r.time, duracion:r.duration, paciente:r.patient, tipo:r.type, estado:r.status, notas:r.notes
-      }));
-      download('citas.csv', toCSV(rows));
+    // NUEVO: listeners de acciones
+    table.querySelectorAll('[data-done]').forEach(b=>{
+      b.addEventListener('click', () => changeStatus(b.dataset.done, 'Realizada'));
     });
+    table.querySelectorAll('[data-cancel]').forEach(b=>{
+      b.addEventListener('click', () => changeStatus(b.dataset.cancel, 'Cancelada'));
+    });
+    table.querySelectorAll('[data-schedule]').forEach(b=>{
+      b.addEventListener('click', () => changeStatus(b.dataset.schedule, 'Programada'));
+    });
+  }
 
-    if (d) d.value = today();
-    load(); render();
-  })();
+  add?.addEventListener('click', ()=>{
+    const item = {
+      id: uuid('apt_'),
+      date: d?.value || today(),
+      time: t?.value || '08:00',
+      duration: Number(dur?.value||30),
+      patient: (p?.value||'').trim(),
+      type: ty?.value || 'Consulta',
+      status: st?.value || 'Programada',
+      notes: (notes?.value||'').trim()
+    };
+    if(!item.patient) return alert('Escribe el nombre del paciente.');
+    state.items.push(item); save();
+    if (p) p.value=''; if (notes) notes.value='';
+    render();
+  });
+
+  [fFrom,fTo,fSt,fTxt].forEach(el=> el?.addEventListener('input', render));
+  fClear?.addEventListener('click', ()=> { if(fFrom)fFrom.value=''; if(fTo)fTo.value=''; if(fSt)fSt.value=''; if(fTxt)fTxt.value=''; render(); });
+  btnCsv?.addEventListener('click', ()=>{
+    if(!state.items.length) return alert('No hay citas.');
+    const rows = state.items.map(r=>({
+      id:r.id, fecha:r.date, hora:r.time, duracion:r.duration, paciente:r.patient, tipo:r.type, estado:r.status, notas:r.notes
+    }));
+    download('citas.csv', toCSV(rows));
+  });
+
+  if (d) d.value = today();
+  load(); render();
+})();
 
   // ================== TABS (Pacientes / Finanzas / Citas) ==================
   (function initTabs(){
@@ -614,6 +641,7 @@ document.addEventListener('DOMContentLoaded', () => {
   })();
 
 });
+
 
 
 
